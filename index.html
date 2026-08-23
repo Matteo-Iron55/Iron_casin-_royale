@@ -451,7 +451,7 @@
             </ul>
         </nav>
         <div class="auth-buttons">
-            <div class="user-balance">Saldo: <span id="user-chips">1000</span> gettoni</div>
+            <div class="user-balance">Saldo: <span id="user-chips">1000</span>€</div>
             <a href="#" class="btn btn-login">Accedi</a>
             <a href="#" class="btn btn-register">Registrati</a>
         </div>
@@ -461,7 +461,7 @@
     <div id="view-home" class="view-section active">
         <section class="hero">
             <h1>Vivi l'emozione del <span>Casinò Reale</span></h1>
-            <p>Divertiti con giochi simulati in totale sicurezza. Ottieni gettoni gratuiti e sfida la fortuna!</p>
+            <p>Divertiti con giochi simulati in totale sicurezza. Ottieni crediti gratuiti e sfida la fortuna!</p>
             <button class="btn btn-register" onclick="switchView('lobby')">Inizia a Giocare</button>
         </section>
     </div>
@@ -512,7 +512,7 @@
         <div class="table-container blackjack-container">
             <div class="bj-header">
                 <div class="bj-title"><i class="fa-solid fa-diamond"></i> Blackjack Table</div>
-                <div class="bj-scoreboard">Puntata: <span id="current-bet">0</span> gettoni</div>
+                <div class="bj-scoreboard">Puntata: <span id="current-bet">0</span>€</div>
             </div>
             <div class="bj-table-area">
                 <div class="bj-section-hand">
@@ -547,7 +547,7 @@
         <div class="table-container">
             <div class="bj-header">
                 <div class="bj-title"><i class="fa-solid fa-star"></i> Book of Gold - Slot</div>
-                <div class="bj-scoreboard">Puntata per Giro: <span id="slot-bet-val">20</span> gettoni</div>
+                <div class="bj-scoreboard">Puntata per Giro: <span id="slot-bet-val">20</span>€</div>
             </div>
             <div class="bj-table-area">
                 <div class="slot-machine-frame">
@@ -596,6 +596,7 @@
 
         /* --- BLACKJACK LOGIC --- */
         let currentBet = 0;
+        let lastBet = 0; // Memorizza l'ultima puntata per "Gioca Ancora"
         let deck = [];
         let playerHand = [];
         let dealerHand = [];
@@ -616,12 +617,13 @@
                 document.getElementById('current-bet').innerText = currentBet;
                 document.getElementById('btn-deal').disabled = false;
             } else {
-                alert("Gettoni non sufficienti!");
+                alert("Fondi insufficienti!");
             }
         }
 
         function resetTable() {
             currentBet = 0;
+            lastBet = 0;
             playerHand = [];
             dealerHand = [];
             gameInProgress = false;
@@ -633,6 +635,7 @@
             document.getElementById('dealer-score').innerText = '0';
             document.getElementById('bj-message').innerText = 'Piazza la tua puntata e premi "Distribuisci"';
             document.getElementById('chips-selection-box').style.display = 'flex';
+            document.getElementById('btn-deal').innerText = "Distribuisci";
             document.getElementById('btn-deal').disabled = true;
             document.getElementById('btn-hit').disabled = true;
             document.getElementById('btn-stand').disabled = true;
@@ -705,7 +708,20 @@
         }
 
         function startRound() {
-            if (currentBet <= 0) return;
+            // Se la puntata corrente è 0 ma l'utente clicca "Gioca Ancora", riusa l'ultima puntata
+            if (currentBet <= 0) {
+                if (lastBet > 0 && balance >= lastBet) {
+                    balance -= lastBet;
+                    currentBet = lastBet;
+                    updateUI();
+                    document.getElementById('current-bet').innerText = currentBet;
+                } else {
+                    alert("Piazza una puntata prima di iniziare!");
+                    return;
+                }
+            }
+
+            lastBet = currentBet; // Salva la puntata per la mano successiva
             gameInProgress = true;
             hideDealerHand = true;
             document.getElementById('chips-selection-box').style.display = 'none';
@@ -719,8 +735,8 @@
             if (calculateScore(playerHand) === 21) {
                 hideDealerHand = false;
                 updateDisplayCards(false);
-                endGame("Blackjack! Hai vinto 3:2!");
                 balance += currentBet * 2.5;
+                endGame("Blackjack! Hai vinto 3:2!");
                 return;
             }
 
@@ -756,6 +772,8 @@
                 } else {
                     playerStand();
                 }
+            } else {
+                alert("Fondi insufficienti per raddoppiare!");
             }
         }
 
@@ -782,13 +800,13 @@
             const pScore = calculateScore(playerHand);
             const dScore = calculateScore(dealerHand);
             if (dScore > 21 || pScore > dScore) {
-                endGame("Complimenti, hai vinto la mano!");
                 balance += currentBet * 2;
+                endGame("Complimenti, hai vinto la mano!");
             } else if (pScore < dScore) {
                 endGame("Il Banco vince la mano.");
             } else {
-                endGame("Pareggio (Push). Puntata restituita.");
                 balance += currentBet;
+                endGame("Pareggio (Push). Puntata restituita.");
             }
         }
 
@@ -797,11 +815,12 @@
             document.getElementById('btn-hit').disabled = true;
             document.getElementById('btn-stand').disabled = true;
             document.getElementById('btn-double').disabled = true;
+            
             setTimeout(() => {
                 document.getElementById('btn-deal').innerText = "Gioca Ancora";
                 document.getElementById('btn-deal').disabled = false;
                 document.getElementById('chips-selection-box').style.display = 'flex';
-                currentBet = 0;
+                currentBet = 0; // Azzera la puntata visibile ma lastBet ricorda quanto puntare
                 document.getElementById('current-bet').innerText = currentBet;
                 updateUI();
             }, 500);
@@ -832,7 +851,7 @@
 
         function spinSlot() {
             if (balance < slotBet) {
-                alert("Gettoni non sufficienti!");
+                alert("Fondi insufficienti!");
                 return;
             }
             balance -= slotBet;
@@ -851,7 +870,7 @@
                     clearInterval(rollInterval);
                     finalizeSpin();
                 }
-            }, 80);
+            }, 800);
         }
 
         function finalizeSpin() {
@@ -868,11 +887,11 @@
                 let multiplier = slotPayouts[r1] || 5;
                 winAmount = slotBet * multiplier;
                 balance += winAmount;
-                document.getElementById('slot-message').innerText = `🎉 TRIPLO ${r1}! Hai vinto ${winAmount} gettoni!`;
+                document.getElementById('slot-message').innerText = `🎉 TRIPLO ${r1}! Hai vinto ${winAmount}€!`;
             } else if (r1 === r2 || r2 === r3 || r1 === r3) {
                 winAmount = Math.floor(slotBet * 1.5);
                 balance += winAmount;
-                document.getElementById('slot-message').innerText = `✨ Due simboli uguali! Hai vinto ${winAmount} gettoni!`;
+                document.getElementById('slot-message').innerText = `✨ Due simboli uguali! Hai vinto ${winAmount}€!`;
             } else {
                 document.getElementById('slot-message').innerText = `❌ Nessuna combinazione. Riprova!`;
             }
