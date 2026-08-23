@@ -626,6 +626,7 @@
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
             container.innerHTML = '';
             container.appendChild(renderer.domElement);
@@ -649,8 +650,11 @@
             // Mazzo di carte 3D in alto a destra con dorso rifinito sulla faccia superiore
             const deckGeo = new THREE.BoxGeometry(0.7, 0.3, 1.0);
             const deckBackTex = createCardTexture('', '', true);
+            const maxAniso = renderer.capabilities.getMaxAnisotropy();
+            deckBackTex.anisotropy = maxAniso;
+
             const deckMaterials = [
-                new THREE.MeshStandardMaterial({ color: 0xe2e8f0 }), // Destra (bordo bianco)
+                new THREE.MeshStandardMaterial({ color: 0xe2e8f0 }), // Destra
                 new THREE.MeshStandardMaterial({ color: 0xe2e8f0 }), // Sinistra
                 new THREE.MeshStandardMaterial({ map: deckBackTex }),    // SOPRA (Dorso carte)
                 new THREE.MeshStandardMaterial({ color: 0x1e3a8a }), // SOTTO
@@ -681,80 +685,83 @@
         }
         window.addEventListener('resize', onWindowResize);
 
-        // Genera la grafica realistica di una carta ad alta risoluzione (512x720) per massima nitidezza
+        // Genera la grafica realistica di una carta ad altissima risoluzione (1024x1440) per una nitidezza perfetta
         function createCardTexture(value, suit, isHidden = false) {
             const canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 720;
+            canvas.width = 1024;
+            canvas.height = 1440;
             const ctx = canvas.getContext('2d');
 
             if (isHidden) {
                 // Retro della carta (Blu casinò con dettagli dorati ad alta definizione)
                 ctx.fillStyle = '#1e3a8a';
-                ctx.fillRect(0, 0, 512, 720);
+                ctx.fillRect(0, 0, 1024, 1440);
                 
                 ctx.strokeStyle = '#d4af37';
-                ctx.lineWidth = 16;
-                ctx.strokeRect(20, 20, 472, 680);
+                ctx.lineWidth = 32;
+                ctx.strokeRect(40, 40, 944, 1360);
                 
                 ctx.fillStyle = '#172554';
-                ctx.fillRect(40, 40, 432, 640);
+                ctx.fillRect(80, 80, 864, 1280);
                 
                 ctx.strokeStyle = '#d4af37';
-                ctx.lineWidth = 6;
-                ctx.strokeRect(40, 40, 432, 640);
+                ctx.lineWidth = 12;
+                ctx.strokeRect(80, 80, 864, 1280);
 
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 64px Poppins, sans-serif';
+                ctx.font = 'bold 120px Poppins, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText("ROYALBET", 256, 360);
+                ctx.fillText("ROYALBET", 512, 720);
             } else {
-                // Fronte della carta bianco pulito ad alta risoluzione
+                // Fronte della carta bianco pulito ad altissima definizione
                 ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, 512, 720);
+                ctx.fillRect(0, 0, 1024, 1440);
                 
                 ctx.strokeStyle = '#cbd5e1';
-                ctx.lineWidth = 12;
-                ctx.strokeRect(6, 6, 500, 708);
+                ctx.lineWidth = 24;
+                ctx.strokeRect(12, 12, 1000, 1416);
 
                 const isRed = (suit === 'hearts' || suit === 'diamonds');
                 ctx.fillStyle = isRed ? '#dc2626' : '#0f172a';
                 
                 // Valore in alto a sinistra
-                ctx.font = 'bold 80px Poppins, sans-serif';
+                ctx.font = 'bold 160px Poppins, sans-serif';
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'alphabetic';
-                ctx.fillText(value, 45, 100);
+                ctx.fillText(value, 90, 200);
 
                 // Seme sotto il valore (in alto a sinistra)
                 const symbols = { 'hearts': '♥', 'diamonds': '♦', 'clubs': '♣', 'spades': '♠' };
-                ctx.font = 'bold 70px sans-serif';
-                ctx.fillText(symbols[suit] || '', 45, 180);
+                ctx.font = 'bold 140px sans-serif';
+                ctx.fillText(symbols[suit] || '', 90, 360);
 
                 // Valore e seme capovolti in basso a destra per realismo
                 ctx.save();
-                ctx.translate(512, 720);
+                ctx.translate(1024, 1440);
                 ctx.rotate(Math.PI);
-                ctx.font = 'bold 80px Poppins, sans-serif';
+                ctx.font = 'bold 160px Poppins, sans-serif';
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'alphabetic';
-                ctx.fillText(value, 45, 100);
-                ctx.font = 'bold 70px sans-serif';
-                ctx.fillText(symbols[suit] || '', 45, 180);
+                ctx.fillText(value, 90, 200);
+                ctx.font = 'bold 140px sans-serif';
+                ctx.fillText(symbols[suit] || '', 90, 360);
                 ctx.restore();
 
                 // Simbolo grande al centro
-                ctx.font = 'bold 200px sans-serif';
+                ctx.font = 'bold 420px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(symbols[suit] || '', 256, 360);
+                ctx.fillText(symbols[suit] || '', 512, 720);
             }
 
             const texture = new THREE.CanvasTexture(canvas);
             texture.generateMipmaps = true;
             texture.minFilter = THREE.LinearMipmapLinearFilter;
             texture.magFilter = THREE.LinearFilter;
+            if (renderer) {
+                texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            }
             texture.needsUpdate = true;
             return texture;
         }
@@ -766,7 +773,6 @@
             const frontTexture = createCardTexture(card ? card.value : '', card ? card.suit : '', false);
             const backTexture = createCardTexture('', '', true);
 
-            // Per una carta sdraiata orizzontalmente sul tavolo, la faccia superiore (py) mostra la grafica corretta
             const topTexture = isHidden ? backTexture : frontTexture;
             const bottomTexture = isHidden ? frontTexture : backTexture;
 
@@ -945,11 +951,10 @@
             playerHand = [deck.pop(), deck.pop()];
             dealerHand = [deck.pop(), deck.pop()];
 
-            // Distribuzione 3D delle carte con valori e semi ad alta risoluzione
             dealCard3D(-0.5, 1.2, playerHand[0], false, () => {
                 dealCard3D(0.5, 1.0, playerHand[1], false, () => {
                     dealCard3D(-0.5, -1.0, dealerHand[0], false, () => {
-                        dealCard3D(0.5, -1.2, dealerHand[1], true, () => { // Seconda carta banco coperta (dorso dettagliato)
+                        dealCard3D(0.5, -1.2, dealerHand[1], true, () => {
                             updateScoreboard(true);
                             
                             if (calculateScore(playerHand) === 21) {
