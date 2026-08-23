@@ -380,7 +380,10 @@
 
         .chips-selection {
             display: flex;
-            gap: 15px;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .chip {
@@ -403,6 +406,16 @@
         .chip-50 { background: #ef4444; color: white; }
         .chip-100 { background: #10b981; color: white; }
         .chip-500 { background: #8b5cf6; color: white; }
+        .chip-clear {
+            background: #475569;
+            color: white;
+            border-radius: 20px;
+            width: auto;
+            height: 35px;
+            padding: 0 15px;
+            border: 1px solid #94a3b8;
+            font-size: 12px;
+        }
 
         .action-buttons {
             display: flex;
@@ -519,7 +532,7 @@
                     <h3>Banco (<span id="dealer-score">0</span>)</h3>
                     <div id="dealer-cards" class="cards-container"></div>
                 </div>
-                <div class="message-box" id="bj-message">Piazza la tua puntata e premi "Distribuisci"</div>
+                <div class="message-box" id="bj-message">Piazza la tua puntata o clicca "Gioca Ancora"</div>
                 <div class="bj-section-hand">
                     <h3>Giocatore (<span id="player-score">0</span>)</h3>
                     <div id="player-cards" class="cards-container"></div>
@@ -531,6 +544,7 @@
                     <div class="chip chip-50" onclick="addBet(50)">50</div>
                     <div class="chip chip-100" onclick="addBet(100)">100</div>
                     <div class="chip chip-500" onclick="addBet(500)">500</div>
+                    <div class="chip chip-clear" onclick="clearBet()">AZZERA</div>
                 </div>
                 <div class="action-buttons">
                     <button id="btn-deal" class="bj-btn btn-deal" onclick="startRound()" disabled>Distribuisci</button>
@@ -596,7 +610,7 @@
 
         /* --- BLACKJACK LOGIC --- */
         let currentBet = 0;
-        let lastBet = 0; // Memorizza l'ultima puntata per "Gioca Ancora"
+        let lastBet = 0; 
         let deck = [];
         let playerHand = [];
         let dealerHand = [];
@@ -616,9 +630,21 @@
                 updateUI();
                 document.getElementById('current-bet').innerText = currentBet;
                 document.getElementById('btn-deal').disabled = false;
+                // Se l'utente sceglie una nuova puntata personalizzata, cambiamo il testo in "Distribuisci"
+                document.getElementById('btn-deal').innerText = "Distribuisci";
             } else {
                 alert("Fondi insufficienti!");
             }
+        }
+
+        function clearBet() {
+            if (gameInProgress || currentBet === 0) return;
+            balance += currentBet; // Restituisce i soldi al saldo
+            currentBet = 0;
+            updateUI();
+            document.getElementById('current-bet').innerText = currentBet;
+            document.getElementById('btn-deal').disabled = lastBet === 0;
+            document.getElementById('btn-deal').innerText = lastBet > 0 ? "Gioca Ancora" : "Distribuisci";
         }
 
         function resetTable() {
@@ -633,7 +659,7 @@
             document.getElementById('dealer-cards').innerHTML = '';
             document.getElementById('player-score').innerText = '0';
             document.getElementById('dealer-score').innerText = '0';
-            document.getElementById('bj-message').innerText = 'Piazza la tua puntata e premi "Distribuisci"';
+            document.getElementById('bj-message').innerText = 'Piazza la tua puntata o clicca "Gioca Ancora"';
             document.getElementById('chips-selection-box').style.display = 'flex';
             document.getElementById('btn-deal').innerText = "Distribuisci";
             document.getElementById('btn-deal').disabled = true;
@@ -708,7 +734,7 @@
         }
 
         function startRound() {
-            // Se la puntata corrente è 0 ma l'utente clicca "Gioca Ancora", riusa l'ultima puntata
+            // Se currentBet è 0, usiamo la puntata precedente (lastBet) del tasto "Gioca Ancora"
             if (currentBet <= 0) {
                 if (lastBet > 0 && balance >= lastBet) {
                     balance -= lastBet;
@@ -721,10 +747,10 @@
                 }
             }
 
-            lastBet = currentBet; // Salva la puntata per la mano successiva
+            lastBet = currentBet; // Memorizza la puntata corrente per la mano successiva
             gameInProgress = true;
             hideDealerHand = true;
-            document.getElementById('chips-selection-box').style.display = 'none';
+            document.getElementById('chips-selection-box').style.display = 'flex';
             document.getElementById('btn-deal').disabled = true;
 
             createDeck();
@@ -819,8 +845,7 @@
             setTimeout(() => {
                 document.getElementById('btn-deal').innerText = "Gioca Ancora";
                 document.getElementById('btn-deal').disabled = false;
-                document.getElementById('chips-selection-box').style.display = 'flex';
-                currentBet = 0; // Azzera la puntata visibile ma lastBet ricorda quanto puntare
+                currentBet = 0; 
                 document.getElementById('current-bet').innerText = currentBet;
                 updateUI();
             }, 500);
