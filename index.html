@@ -646,10 +646,18 @@
             tableMesh.receiveShadow = true;
             scene.add(tableMesh);
 
-            // Mazzo di carte 3D in alto a destra (blu)
+            // Mazzo di carte 3D in alto a destra con dorso rifinito sulla faccia superiore
             const deckGeo = new THREE.BoxGeometry(0.7, 0.3, 1.0);
-            const deckMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.4 });
-            deckMesh = new THREE.Mesh(deckGeo, deckMat);
+            const deckBackTex = createCardTexture('', '', true);
+            const deckMaterials = [
+                new THREE.MeshStandardMaterial({ color: 0xe2e8f0 }), // Destra (bordo bianco)
+                new THREE.MeshStandardMaterial({ color: 0xe2e8f0 }), // Sinistra
+                new THREE.MeshStandardMaterial({ map: deckBackTex }),    // SOPRA (Dorso carte)
+                new THREE.MeshStandardMaterial({ color: 0x1e3a8a }), // SOTTO
+                new THREE.MeshStandardMaterial({ color: 0xe2e8f0 }), // Fronte (Spessore)
+                new THREE.MeshStandardMaterial({ color: 0xe2e8f0 })  // Retro (Spessore)
+            ];
+            deckMesh = new THREE.Mesh(deckGeo, deckMaterials);
             deckMesh.position.set(2.5, 0.15, -1.8);
             deckMesh.castShadow = true;
             scene.add(deckMesh);
@@ -673,56 +681,80 @@
         }
         window.addEventListener('resize', onWindowResize);
 
-        // Genera la grafica realistica di una carta da poker con canvas dinamico
+        // Genera la grafica realistica di una carta ad alta risoluzione (512x720) per massima nitidezza
         function createCardTexture(value, suit, isHidden = false) {
             const canvas = document.createElement('canvas');
-            canvas.width = 128;
-            canvas.height = 180;
+            canvas.width = 512;
+            canvas.height = 720;
             const ctx = canvas.getContext('2d');
 
             if (isHidden) {
-                // Retro della carta (Blu casinò con dettagli dorati)
+                // Retro della carta (Blu casinò con dettagli dorati ad alta definizione)
                 ctx.fillStyle = '#1e3a8a';
-                ctx.fillRect(0, 0, 128, 180);
+                ctx.fillRect(0, 0, 512, 720);
+                
+                ctx.strokeStyle = '#d4af37';
+                ctx.lineWidth = 16;
+                ctx.strokeRect(20, 20, 472, 680);
+                
+                ctx.fillStyle = '#172554';
+                ctx.fillRect(40, 40, 432, 640);
+                
                 ctx.strokeStyle = '#d4af37';
                 ctx.lineWidth = 6;
-                ctx.strokeRect(6, 6, 116, 168);
-                
+                ctx.strokeRect(40, 40, 432, 640);
+
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 20px Poppins, sans-serif';
+                ctx.font = 'bold 64px Poppins, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText("ROYALBET", 64, 90);
+                ctx.fillText("ROYALBET", 256, 360);
             } else {
-                // Fronte della carta bianco pulito
+                // Fronte della carta bianco pulito ad alta risoluzione
                 ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, 128, 180);
+                ctx.fillRect(0, 0, 512, 720);
+                
                 ctx.strokeStyle = '#cbd5e1';
-                ctx.lineWidth = 4;
-                ctx.strokeRect(2, 2, 124, 176);
+                ctx.lineWidth = 12;
+                ctx.strokeRect(6, 6, 500, 708);
 
                 const isRed = (suit === 'hearts' || suit === 'diamonds');
                 ctx.fillStyle = isRed ? '#dc2626' : '#0f172a';
                 
                 // Valore in alto a sinistra
-                ctx.font = 'bold 24px Poppins, sans-serif';
+                ctx.font = 'bold 80px Poppins, sans-serif';
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'alphabetic';
-                ctx.fillText(value, 10, 30);
+                ctx.fillText(value, 45, 100);
 
-                // Seme sotto il valore
+                // Seme sotto il valore (in alto a sinistra)
                 const symbols = { 'hearts': '♥', 'diamonds': '♦', 'clubs': '♣', 'spades': '♠' };
-                ctx.font = 'bold 20px sans-serif';
-                ctx.fillText(symbols[suit] || '', 12, 55);
+                ctx.font = 'bold 70px sans-serif';
+                ctx.fillText(symbols[suit] || '', 45, 180);
+
+                // Valore e seme capovolti in basso a destra per realismo
+                ctx.save();
+                ctx.translate(512, 720);
+                ctx.rotate(Math.PI);
+                ctx.font = 'bold 80px Poppins, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'alphabetic';
+                ctx.fillText(value, 45, 100);
+                ctx.font = 'bold 70px sans-serif';
+                ctx.fillText(symbols[suit] || '', 45, 180);
+                ctx.restore();
 
                 // Simbolo grande al centro
-                ctx.font = 'bold 48px sans-serif';
+                ctx.font = 'bold 200px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(symbols[suit] || '', 64, 100);
+                ctx.fillText(symbols[suit] || '', 256, 360);
             }
 
             const texture = new THREE.CanvasTexture(canvas);
+            texture.generateMipmaps = true;
+            texture.minFilter = THREE.LinearMipmapLinearFilter;
+            texture.magFilter = THREE.LinearFilter;
             texture.needsUpdate = true;
             return texture;
         }
@@ -913,11 +945,11 @@
             playerHand = [deck.pop(), deck.pop()];
             dealerHand = [deck.pop(), deck.pop()];
 
-            // Distribuzione 3D delle carte con valori e semi reali
+            // Distribuzione 3D delle carte con valori e semi ad alta risoluzione
             dealCard3D(-0.5, 1.2, playerHand[0], false, () => {
                 dealCard3D(0.5, 1.0, playerHand[1], false, () => {
                     dealCard3D(-0.5, -1.0, dealerHand[0], false, () => {
-                        dealCard3D(0.5, -1.2, dealerHand[1], true, () => { // Seconda carta banco coperta (blu)
+                        dealCard3D(0.5, -1.2, dealerHand[1], true, () => { // Seconda carta banco coperta (dorso dettagliato)
                             updateScoreboard(true);
                             
                             if (calculateScore(playerHand) === 21) {
