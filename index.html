@@ -380,22 +380,22 @@
 
         .chips-selection {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             align-items: center;
             flex-wrap: wrap;
             justify-content: center;
         }
 
         .chip {
-            width: 50px;
-            height: 50px;
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
             border: 3px dashed #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 11px;
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             transition: transform 0.2s;
@@ -403,18 +403,22 @@
 
         .chip:hover { transform: scale(1.1); }
         .chip-10 { background: #3b82f6; color: white; }
+        .chip-20 { background: #f97316; color: white; }
+        .chip-30 { background: #06b6d4; color: white; }
         .chip-50 { background: #ef4444; color: white; }
+        .chip-70 { background: #ec4899; color: white; }
         .chip-100 { background: #10b981; color: white; }
         .chip-500 { background: #8b5cf6; color: white; }
+        
         .chip-clear {
             background: #475569;
             color: white;
             border-radius: 20px;
             width: auto;
             height: 35px;
-            padding: 0 15px;
+            padding: 0 12px;
             border: 1px solid #94a3b8;
-            font-size: 12px;
+            font-size: 11px;
         }
 
         .action-buttons {
@@ -540,10 +544,13 @@
             </div>
             <div class="bj-controls-area">
                 <div class="chips-selection" id="chips-selection-box">
-                    <div class="chip chip-10" onclick="addBet(10)">10</div>
-                    <div class="chip chip-50" onclick="addBet(50)">50</div>
-                    <div class="chip chip-100" onclick="addBet(100)">100</div>
-                    <div class="chip chip-500" onclick="addBet(500)">500</div>
+                    <div class="chip chip-10" onclick="addBet(10)">10€</div>
+                    <div class="chip chip-20" onclick="addBet(20)">20€</div>
+                    <div class="chip chip-30" onclick="addBet(30)">30€</div>
+                    <div class="chip chip-50" onclick="addBet(50)">50€</div>
+                    <div class="chip chip-70" onclick="addBet(70)">70€</div>
+                    <div class="chip chip-100" onclick="addBet(100)">100€</div>
+                    <div class="chip chip-500" onclick="addBet(500)">500€</div>
                     <div class="chip chip-clear" onclick="clearBet()">AZZERA</div>
                 </div>
                 <div class="action-buttons">
@@ -575,9 +582,10 @@
             </div>
             <div class="bj-controls-area">
                 <div class="chips-selection" id="slot-chips-box">
-                    <div class="chip chip-10" onclick="changeSlotBet(10)">10</div>
-                    <div class="chip chip-50" onclick="changeSlotBet(50)">50</div>
-                    <div class="chip chip-100" onclick="changeSlotBet(100)">100</div>
+                    <div class="chip chip-10" onclick="changeSlotBet(10)">10€</div>
+                    <div class="chip chip-20" onclick="changeSlotBet(20)">20€</div>
+                    <div class="chip chip-50" onclick="changeSlotBet(50)">50€</div>
+                    <div class="chip chip-100" onclick="changeSlotBet(100)">100€</div>
                 </div>
                 <div class="action-buttons">
                     <button id="btn-spin" class="bj-btn btn-deal" onclick="spinSlot()">Gira i Rulli</button>
@@ -624,13 +632,11 @@
 
         function addBet(amount) {
             if (gameInProgress) return;
-            if (balance >= amount) {
-                balance -= amount;
+            // Verifica se il saldo residuo basta per aggiungere questa fiche alla puntata corrente
+            if (balance >= (currentBet + amount)) {
                 currentBet += amount;
-                updateUI();
                 document.getElementById('current-bet').innerText = currentBet;
                 document.getElementById('btn-deal').disabled = false;
-                // Se l'utente sceglie una nuova puntata personalizzata, cambiamo il testo in "Distribuisci"
                 document.getElementById('btn-deal').innerText = "Distribuisci";
             } else {
                 alert("Fondi insufficienti!");
@@ -639,9 +645,7 @@
 
         function clearBet() {
             if (gameInProgress || currentBet === 0) return;
-            balance += currentBet; // Restituisce i soldi al saldo
-            currentBet = 0;
-            updateUI();
+            currentBet = 0; // Visto che il saldo non era stato toccato, azzeriamo solo la puntata sul tavolo
             document.getElementById('current-bet').innerText = currentBet;
             document.getElementById('btn-deal').disabled = lastBet === 0;
             document.getElementById('btn-deal').innerText = lastBet > 0 ? "Gioca Ancora" : "Distribuisci";
@@ -734,20 +738,30 @@
         }
 
         function startRound() {
-            // Se currentBet è 0, usiamo la puntata precedente (lastBet) del tasto "Gioca Ancora"
-            if (currentBet <= 0) {
-                if (lastBet > 0 && balance >= lastBet) {
-                    balance -= lastBet;
-                    currentBet = lastBet;
-                    updateUI();
-                    document.getElementById('current-bet').innerText = currentBet;
+            let betToPlay = currentBet;
+            
+            // Se currentBet è 0, significa che l'utente ha cliccato "Gioca Ancora" usando lastBet
+            if (betToPlay <= 0) {
+                if (lastBet > 0) {
+                    betToPlay = lastBet;
                 } else {
                     alert("Piazza una puntata prima di iniziare!");
                     return;
                 }
             }
 
-            lastBet = currentBet; // Memorizza la puntata corrente per la mano successiva
+            // Verifica finale del saldo e sottrazione effettiva solo ora che la mano parte
+            if (balance >= betToPlay) {
+                balance -= betToPlay;
+                currentBet = betToPlay;
+                updateUI();
+                document.getElementById('current-bet').innerText = currentBet;
+            } else {
+                alert("Fondi insufficienti!");
+                return;
+            }
+
+            lastBet = currentBet; // Memorizza la puntata per la mano successiva
             gameInProgress = true;
             hideDealerHand = true;
             document.getElementById('chips-selection-box').style.display = 'flex';
