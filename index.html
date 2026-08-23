@@ -3,11 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RoyalBet Casino - Slot & Blackjack</title>
+    <title>RoyalBet Casino - Slot & Blackjack 3D</title>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome per le icone -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- LIBRERIE 3D E ANIMAZIONI -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     
     <style>
         * {
@@ -163,11 +167,6 @@
             margin-bottom: 30px;
         }
 
-        .hero .btn-register {
-            font-size: 18px;
-            padding: 15px 40px;
-        }
-
         /* LOBBY GIOCHI */
         .games-section {
             padding: 40px 5%;
@@ -230,20 +229,20 @@
             font-size: 14px;
         }
 
-        /* CONTENITORE COMUNE TAVOLI E SLOT */
+        /* CONTENITORE TAVOLO 3D BLACKJACK */
         .table-container {
             flex: 1;
             background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
             border: 12px solid #334155;
             border-radius: 20px;
             margin: 20px 5%;
-            padding: 30px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             box-shadow: inset 0 0 50px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.5);
             position: relative;
-            min-height: 550px;
+            min-height: 600px;
         }
 
         .blackjack-container {
@@ -257,6 +256,7 @@
             align-items: center;
             border-bottom: 2px dashed rgba(255,255,255,0.2);
             padding-bottom: 15px;
+            z-index: 10;
         }
 
         .bj-title {
@@ -274,61 +274,36 @@
             border: 1px solid #d4af37;
         }
 
+        /* AREA CANVAS 3D */
+        #webgl-container {
+            width: 100%;
+            height: 350px;
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #082414;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.7);
+        }
+
         .bj-table-area {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 30px;
-            margin: 20px 0;
+            gap: 15px;
+            margin: 10px 0;
+            z-index: 10;
         }
 
-        .bj-section-hand {
-            text-align: center;
-        }
-
-        .bj-section-hand h3 {
-            font-size: 15px;
-            color: #cbd5e1;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .cards-container {
+        .scores-panel {
             display: flex;
-            gap: 10px;
-            justify-content: center;
-            min-height: 100px;
-            align-items: center;
-        }
-
-        /* STILE CARTE BLACKJACK */
-        .playing-card {
-            width: 70px;
-            height: 100px;
-            background: #ffffff;
-            color: #1e293b;
-            border-radius: 6px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            justify-content: space-around;
+            width: 100%;
+            background: rgba(0,0,0,0.3);
             padding: 8px;
-            font-weight: 700;
-            font-size: 16px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            animation: cardDeal 0.3s ease-out;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
         }
-
-        @keyframes cardDeal {
-            from { transform: translateY(-50px) scale(0.8); opacity: 0; }
-            to { transform: translateY(0) scale(1); opacity: 1; }
-        }
-
-        .playing-card.red { color: #dc2626; }
-        .playing-card.back { background: linear-gradient(135deg, #1e3a8a, #172554); border: 2px solid #93c5fd; }
-        .card-top { align-self: flex-start; line-height: 1; }
-        .card-center { align-self: center; font-size: 24px; }
-        .card-bottom { align-self: flex-end; line-height: 1; transform: rotate(180deg); }
 
         /* STILE SLOT MACHINE */
         .slot-machine-frame {
@@ -337,6 +312,7 @@
             border-radius: 15px;
             padding: 25px;
             box-shadow: 0 0 30px rgba(212, 175, 55, 0.2);
+            margin: 20px auto;
         }
 
         .slot-reels {
@@ -365,9 +341,10 @@
             flex-direction: column;
             align-items: center;
             gap: 15px;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
             border-radius: 10px;
+            z-index: 10;
         }
 
         .message-box {
@@ -477,8 +454,8 @@
     <!-- 1. HOME -->
     <div id="view-home" class="view-section active">
         <section class="hero">
-            <h1>Vivi l'emozione del <span>Casinò Reale</span></h1>
-            <p>Divertiti con giochi simulati in totale sicurezza. Ottieni crediti gratuiti e sfida la fortuna!</p>
+            <h1>Vivi l'emozione del <span>Casinò 3D Reale</span></h1>
+            <p>Divertiti con il tavolo 3D interattivo, animazioni fluide e crediti gratuiti!</p>
             <button class="btn btn-register" onclick="switchView('lobby')">Inizia a Giocare</button>
         </section>
     </div>
@@ -488,15 +465,13 @@
         <section class="games-section">
             <h2 class="section-title">Categorie di Gioco</h2>
             <div class="games-grid">
-                <!-- Categoria Blackjack -->
                 <div class="game-card" onclick="openBlackjack()">
                     <div class="game-img" style="background-image: url('https://images.unsplash.com/photo-1541271569502-b164da2f9ca8?auto=format&fit=crop&w=500&q=80');"></div>
                     <div class="game-info">
-                        <span class="game-title">Blackjack 2D</span>
+                        <span class="game-title">Blackjack 3D Table</span>
                         <span class="play-btn">Gioca</span>
                     </div>
                 </div>
-                <!-- Categoria Slot Machines -->
                 <div class="game-card" onclick="openSlotsList()">
                     <div class="game-img" style="background-image: url('https://images.unsplash.com/photo-1596838132731-3301c3fd4317?auto=format&fit=crop&w=500&q=80');"></div>
                     <div class="game-info">
@@ -524,24 +499,27 @@
         </section>
     </div>
 
-    <!-- 4. TAVOLO BLACKJACK -->
+    <!-- 4. TAVOLO BLACKJACK 3D -->
     <div id="view-blackjack" class="view-section">
         <div class="table-container blackjack-container">
             <div class="bj-header">
-                <div class="bj-title"><i class="fa-solid fa-diamond"></i> Blackjack Table</div>
+                <div class="bj-title"><i class="fa-solid fa-dice"></i> Blackjack 3D Dealer</div>
                 <div class="bj-scoreboard">Puntata: <span id="current-bet">0</span>€</div>
             </div>
+            
             <div class="bj-table-area">
-                <div class="bj-section-hand">
-                    <h3>Banco (<span id="dealer-score">0</span>)</h3>
-                    <div id="dealer-cards" class="cards-container"></div>
+                <!-- Canvas 3D Three.js per il tavolo, il mazzo e le carte in movimento -->
+                <div id="webgl-container"></div>
+                
+                <div class="scores-panel">
+                    <span>Banco: <span id="dealer-score">0</span></span>
+                    <span id="turn-indicator" style="color: #facc15;">In attesa di puntata</span>
+                    <span>Giocatore: <span id="player-score">0</span></span>
                 </div>
+
                 <div class="message-box" id="bj-message">Piazza la tua puntata o clicca "Gioca Ancora"</div>
-                <div class="bj-section-hand">
-                    <h3>Giocatore (<span id="player-score">0</span>)</h3>
-                    <div id="player-cards" class="cards-container"></div>
-                </div>
             </div>
+
             <div class="bj-controls-area">
                 <div class="chips-selection" id="chips-selection-box">
                     <div class="chip chip-10" onclick="addBet(10)">10€</div>
@@ -563,14 +541,14 @@
         </div>
     </div>
 
-    <!-- 5. SCHERMATA SLOT MACHINE "BOOK OF GOLD" -->
+    <!-- 5. SCHERMATA SLOT MACHINE -->
     <div id="view-slot-game" class="view-section">
         <div class="table-container">
             <div class="bj-header">
                 <div class="bj-title"><i class="fa-solid fa-star"></i> Book of Gold - Slot</div>
                 <div class="bj-scoreboard">Puntata per Giro: <span id="slot-bet-val">20</span>€</div>
             </div>
-            <div class="bj-table-area">
+            <div class="bj-table-area" style="gap: 30px;">
                 <div class="slot-machine-frame">
                     <div class="slot-reels">
                         <div class="slot-reel" id="reel-1">🍒</div>
@@ -596,10 +574,10 @@
 
     <!-- Footer -->
     <footer>
-        <p>&copy; 2026 RoyalBet Casino. Tutti i diritti riservati. Piattaforma di intrattenimento con crediti virtuali.</p>
+        <p>&copy; 2026 RoyalBet Casino. Tutti i diritti riservati. Piattaforma 3D con crediti virtuali.</p>
     </footer>
 
-    <!-- LOGICA JAVASCRIPT -->
+    <!-- LOGICA JAVASCRIPT & THREE.JS -->
     <script>
         let balance = 1000;
 
@@ -614,7 +592,121 @@
             document.querySelectorAll('nav ul li a').forEach(el => el.classList.remove('active'));
             if(viewId === 'home') document.getElementById('nav-home').classList.add('active');
             if(viewId === 'lobby' || viewId === 'slots-list') document.getElementById('nav-lobby').classList.add('active');
+
+            if (viewId === 'blackjack') {
+                setTimeout(initThreeJS, 200); // Inizializza il 3D quando la vista diventa attiva
+            }
         }
+
+        /* --- THREE.JS 3D TABLE ENGINE --- */
+        let scene, camera, renderer, tableMesh, deckMesh;
+        let animatedCards3D = [];
+        let threeInitialized = false;
+
+        function initThreeJS() {
+            const container = document.getElementById('webgl-container');
+            if (!container) return;
+            
+            if (threeInitialized) {
+                onWindowResize();
+                return;
+            }
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x062c1a);
+
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 7, 6);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            container.innerHTML = '';
+            container.appendChild(renderer.domElement);
+
+            // Luci d'ambiente e direzionali per il 3D
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(0, 10, 5);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            // Tavolo da gioco (panno verde 3D)
+            const tableGeo = new THREE.PlaneGeometry(8, 6);
+            const tableMat = new THREE.MeshStandardMaterial({ color: 0x0f5132, roughness: 0.8 });
+            tableMesh = new THREE.Mesh(tableGeo, tableMat);
+            tableMesh.rotation.x = -Math.PI / 2;
+            tableMesh.receiveShadow = true;
+            scene.add(tableMesh);
+
+            // Mazzo di carte 3D (la scarpetta del dealer in alto a destra)
+            const deckGeo = new THREE.BoxGeometry(0.8, 0.4, 1.2);
+            const deckMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a });
+            deckMesh = new THREE.Mesh(deckGeo, deckMat);
+            deckMesh.position.set(2.5, 0.2, -1.8);
+            deckMesh.castShadow = true;
+            scene.add(deckMesh);
+
+            threeInitialized = true;
+            animateThree();
+        }
+
+        function animateThree() {
+            if (!threeInitialized) return;
+            requestAnimationFrame(animateThree);
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('webgl-container');
+            if (!container || !camera || !renderer) return;
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+        window.addEventListener('resize', onWindowResize);
+
+        // Funzione 3D per generare e animare una carta che parte dal mazzo e arriva sul tavolo
+        function dealCard3D(targetX, targetZ, isHidden = false, callback) {
+            const cardGeo = new THREE.BoxGeometry(0.7, 0.02, 1.0);
+            const cardMat = new THREE.MeshStandardMaterial({ 
+                color: isHidden ? 0x1d4ed8 : 0xffffff, 
+                roughness: 0.2 
+            });
+            const card = new THREE.Mesh(cardGeo, cardMat);
+            
+            // Posizione iniziale sopra il mazzo
+            card.position.set(2.5, 0.5, -1.8);
+            card.castShadow = true;
+            scene.add(card);
+            animatedCards3D.push(card);
+
+            // Animazione fluida con GSAP dal mazzo alla posizione finale sul tavolo
+            gsap.to(card.position, {
+                x: targetX,
+                y: 0.05,
+                z: targetZ,
+                duration: 0.6,
+                ease: "power2.out",
+                onComplete: () => {
+                    if (callback) callback();
+                }
+            });
+
+            gsap.to(card.rotation, {
+                y: (Math.random() - 0.5) * 0.2,
+                duration: 0.6
+            });
+        }
+
+        function clear3DCards() {
+            animatedCards3D.forEach(card => scene.remove(card));
+            animatedCards3D = [];
+        }
+
 
         /* --- BLACKJACK LOGIC --- */
         let currentBet = 0;
@@ -632,7 +724,6 @@
 
         function addBet(amount) {
             if (gameInProgress) return;
-            // Verifica se il saldo residuo basta per aggiungere questa fiche alla puntata corrente
             if (balance >= (currentBet + amount)) {
                 currentBet += amount;
                 document.getElementById('current-bet').innerText = currentBet;
@@ -657,13 +748,14 @@
             playerHand = [];
             dealerHand = [];
             gameInProgress = false;
+            clear3DCards();
             updateUI();
             document.getElementById('current-bet').innerText = currentBet;
-            document.getElementById('player-cards').innerHTML = '';
-            document.getElementById('dealer-cards').innerHTML = '';
             document.getElementById('player-score').innerText = '0';
             document.getElementById('dealer-score').innerText = '0';
             document.getElementById('bj-message').innerText = 'Piazza la tua puntata o clicca "Gioca Ancora"';
+            document.getElementById('turn-indicator').innerText = 'In attesa di puntata';
+            document.getElementById('turn-indicator').style.color = '#facc15';
             document.getElementById('chips-selection-box').style.display = 'flex';
             document.getElementById('btn-deal').innerText = "Distribuisci";
             document.getElementById('btn-deal').disabled = true;
@@ -711,36 +803,17 @@
             return score;
         }
 
-        function renderCardHTML(card, hidden = false) {
-            if (hidden) return `<div class="playing-card back"></div>`;
-            const isRed = card.suit === 'hearts' || card.suit === 'diamonds';
-            let suitSymbol = card.suit === 'hearts' ? '♥' : card.suit === 'diamonds' ? '♦' : card.suit === 'clubs' ? '♣' : '♠';
-            return `
-                <div class="playing-card ${isRed ? 'red' : ''}">
-                    <div class="card-top">${card.value}<br>${suitSymbol}</div>
-                    <div class="card-center">${suitSymbol}</div>
-                    <div class="card-bottom">${card.value}<br>${suitSymbol}</div>
-                </div>
-            `;
-        }
-
-        function updateDisplayCards(hideDealerSecond = true) {
-            document.getElementById('player-cards').innerHTML = playerHand.map(c => renderCardHTML(c)).join('');
+        function updateScoreboard(hideDealerSecond = true) {
             document.getElementById('player-score').innerText = calculateScore(playerHand);
-
             if (hideDealerHand && hideDealerSecond && dealerHand.length >= 2) {
-                document.getElementById('dealer-cards').innerHTML = renderCardHTML(dealerHand[0]) + renderCardHTML(null, true);
                 document.getElementById('dealer-score').innerText = getCardNumericValue(dealerHand[0]);
             } else {
-                document.getElementById('dealer-cards').innerHTML = dealerHand.map(c => renderCardHTML(c)).join('');
                 document.getElementById('dealer-score').innerText = calculateScore(dealerHand);
             }
         }
 
         function startRound() {
             let betToPlay = currentBet;
-            
-            // Se currentBet è 0, significa che l'utente ha cliccato "Gioca Ancora" usando lastBet
             if (betToPlay <= 0) {
                 if (lastBet > 0) {
                     betToPlay = lastBet;
@@ -750,7 +823,6 @@
                 }
             }
 
-            // Verifica finale del saldo e sottrazione effettiva solo ora che la mano parte
             if (balance >= betToPlay) {
                 balance -= betToPlay;
                 currentBet = betToPlay;
@@ -761,40 +833,62 @@
                 return;
             }
 
-            lastBet = currentBet; // Memorizza la puntata per la mano successiva
+            lastBet = currentBet;
             gameInProgress = true;
             hideDealerHand = true;
+            clear3DCards();
             document.getElementById('chips-selection-box').style.display = 'flex';
             document.getElementById('btn-deal').disabled = true;
 
             createDeck();
             playerHand = [deck.pop(), deck.pop()];
             dealerHand = [deck.pop(), deck.pop()];
-            updateDisplayCards(true);
 
-            if (calculateScore(playerHand) === 21) {
-                hideDealerHand = false;
-                updateDisplayCards(false);
-                balance += currentBet * 2.5;
-                endGame("Blackjack! Hai vinto 3:2!");
-                return;
-            }
+            // Distribuzione 3D realistica dal mazziere
+            // Coordinate 3D sul tavolo: Giocatore in basso (Z: 1.2), Banco in alto (Z: -1.0)
+            dealCard3D(-0.5, 1.2, false, () => {
+                dealCard3D(0.5, 1.0, false, () => {
+                    dealCard3D(-0.5, -1.0, false, () => {
+                        dealCard3D(0.5, -1.2, true, () => { // Seconda carta banco coperta
+                            updateScoreboard(true);
+                            
+                            if (calculateScore(playerHand) === 21) {
+                                hideDealerHand = false;
+                                updateScoreboard(false);
+                                balance += currentBet * 2.5;
+                                endGame("Blackjack! Hai vinto 3:2!");
+                                return;
+                            }
 
-            document.getElementById('btn-hit').disabled = false;
-            document.getElementById('btn-stand').disabled = false;
-            if (balance >= currentBet) document.getElementById('btn-double').disabled = false;
-            document.getElementById('bj-message').innerText = 'Scegli la tua mossa...';
+                            document.getElementById('btn-hit').disabled = false;
+                            document.getElementById('btn-stand').disabled = false;
+                            if (balance >= currentBet) document.getElementById('btn-double').disabled = false;
+                            
+                            // Indicatore turno attivo sulle tue carte
+                            document.getElementById('turn-indicator').innerText = "Tuo Turno (Gioca)";
+                            document.getElementById('turn-indicator').style.color = '#4ade80';
+                            document.getElementById('bj-message').innerText = 'Tocca a te: scegli la mossa!';
+                        });
+                    });
+                });
+            });
         }
 
         function playerHit() {
             document.getElementById('btn-double').disabled = true;
-            playerHand.push(deck.pop());
-            updateDisplayCards(true);
-            if (calculateScore(playerHand) > 21) {
-                hideDealerHand = false;
-                updateDisplayCards(false);
-                endGame("Hai sballato! (Bust). Il Banco vince.");
-            }
+            const newCard = deck.pop();
+            playerHand.push(newCard);
+            
+            // Posiziona la nuova carta aggiuntiva del giocatore in 3D
+            const offsetX = (playerHand.length - 2) * 0.6;
+            dealCard3D(offsetX, 1.3, false, () => {
+                updateScoreboard(true);
+                if (calculateScore(playerHand) > 21) {
+                    hideDealerHand = false;
+                    updateScoreboard(false);
+                    endGame("Hai sballato! (Bust). Il Banco vince.");
+                }
+            });
         }
 
         function playerDouble() {
@@ -803,15 +897,19 @@
                 currentBet *= 2;
                 updateUI();
                 document.getElementById('current-bet').innerText = currentBet;
-                playerHand.push(deck.pop());
-                updateDisplayCards(true);
-                if (calculateScore(playerHand) > 21) {
-                    hideDealerHand = false;
-                    updateDisplayCards(false);
-                    endGame("Hai sballato dopo il raddoppio!");
-                } else {
-                    playerStand();
-                }
+                
+                const newCard = deck.pop();
+                playerHand.push(newCard);
+                dealCard3D(0.8, 1.4, false, () => {
+                    updateScoreboard(true);
+                    if (calculateScore(playerHand) > 21) {
+                        hideDealerHand = false;
+                        updateScoreboard(false);
+                        endGame("Hai sballato dopo il raddoppio!");
+                    } else {
+                        playerStand();
+                    }
+                });
             } else {
                 alert("Fondi insufficienti per raddoppiare!");
             }
@@ -821,19 +919,26 @@
             document.getElementById('btn-hit').disabled = true;
             document.getElementById('btn-stand').disabled = true;
             document.getElementById('btn-double').disabled = true;
+            
+            document.getElementById('turn-indicator').innerText = "Turno del Banco";
+            document.getElementById('turn-indicator').style.color = '#f87171';
+
             hideDealerHand = false;
-            updateDisplayCards(false);
-            document.getElementById('bj-message').innerText = 'Turno del Banco...';
+            updateScoreboard(false);
+            document.getElementById('bj-message').innerText = 'Il Banco pesca...';
 
             let dealerInterval = setInterval(() => {
                 if (calculateScore(dealerHand) < 17) {
                     dealerHand.push(deck.pop());
-                    updateDisplayCards(false);
+                    const dOffsetX = (dealerHand.length - 2) * 0.6;
+                    dealCard3D(dOffsetX, -1.3, false, () => {
+                        updateScoreboard(false);
+                    });
                 } else {
                     clearInterval(dealerInterval);
                     evaluateWinner();
                 }
-            }, 800);
+            }, 900);
         }
 
         function evaluateWinner() {
@@ -852,10 +957,12 @@
 
         function endGame(message) {
             document.getElementById('bj-message').innerText = message;
+            document.getElementById('turn-indicator').innerText = "Mano Conclusa";
+            document.getElementById('turn-indicator').style.color = '#facc15';
             document.getElementById('btn-hit').disabled = true;
             document.getElementById('btn-stand').disabled = true;
             document.getElementById('btn-double').disabled = true;
-            gameInProgress = false; // Sblocca la selezione delle fiches per la mano successiva
+            gameInProgress = false;
             
             setTimeout(() => {
                 document.getElementById('btn-deal').innerText = "Gioca Ancora";
@@ -863,7 +970,7 @@
                 currentBet = 0; 
                 document.getElementById('current-bet').innerText = currentBet;
                 updateUI();
-            }, 500);
+            }, 600);
         }
 
         /* --- SLOT MACHINE LOGIC --- */
