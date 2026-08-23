@@ -839,8 +839,8 @@
         let lastBet = 0; 
         let deck = [];
         
-        let playerHands = []; // Array di mani (es. [ [c1, c2], [c3, c4] ] in caso di split)
-        let activeHandIndex = 0; // 0 = mano destra, 1 = mano sinistra
+        let playerHands = []; 
+        let activeHandIndex = 0; 
         let isSplit = false;
         
         let dealerHand = [];
@@ -978,12 +978,11 @@
             document.getElementById('btn-deal').disabled = true;
 
             createDeck();
-            const pCard1 = deck.pop(); // Mano sinistra iniziale
-            const pCard2 = deck.pop(); // Mano destra iniziale
+            const pCard1 = deck.pop(); 
+            const pCard2 = deck.pop(); 
             playerHands = [[pCard1, pCard2]];
             dealerHand = [deck.pop(), deck.pop()];
 
-            // Distribuzione carte 3D
             dealCard3D(-0.6, 1.2, pCard1, false, false, () => {
                 dealCard3D(0.6, 1.0, pCard2, false, false, () => {
                     dealCard3D(-0.6, -1.0, dealerHand[0], false, false, () => {
@@ -1001,12 +1000,10 @@
                                 return;
                             }
 
-                            // Abilita comandi standard
                             document.getElementById('btn-hit').disabled = false;
                             document.getElementById('btn-stand').disabled = false;
                             if (balance >= currentBet) document.getElementById('btn-double').disabled = false;
 
-                            // Abilita Split se le prime due carte hanno lo stesso valore (es. coppia o Re/Regina entrambi valore 10)
                             const canSplit = (getCardNumericValue(pCard1) === getCardNumericValue(pCard2)) && (balance >= currentBet);
                             document.getElementById('btn-split').disabled = !canSplit;
                             
@@ -1019,7 +1016,6 @@
             });
         }
 
-        // FUNZIONE SPLIT
         function playerSplit() {
             if (balance < currentBet) {
                 alert("Fondi insufficienti per effettuare lo Split!");
@@ -1033,20 +1029,14 @@
 
             document.getElementById('bj-message').innerText = 'Split effettuato! Giochi due mani.';
 
-            // Dividi le carte in due mani distinte:
-            // playerHands[0] = mano destra (carta 2)
-            // playerHands[1] = mano sinistra (carta 1)
             const cardLeft = playerHands[0][0];
             const cardRight = playerHands[0][1];
             playerHands = [[cardRight], [cardLeft]];
 
-            activeHandIndex = 0; // Si comincia a giocare la mano di destra (indice 0)
+            activeHandIndex = 0; 
 
-            // Anima la carta sinistra spostandola a sinistra (-1.5)
-            // animatedCards3D[0] è la carta sinistra, animatedCards3D[1] è la carta destra
             gsap.to(animatedCards3D[0].position, { x: -1.5, duration: 0.5, ease: "power2.out" });
 
-            // Pescaggio immediato di una nuova carta per la mano destra (indice 0)
             const newCardRight = deck.pop();
             playerHands[0].push(newCardRight);
 
@@ -1064,7 +1054,6 @@
             const newCard = deck.pop();
             playerHands[activeHandIndex].push(newCard);
             
-            // Calcola la posizione X in base alla mano attiva e numero di carte
             let targetX = (activeHandIndex === 0) ? 0.6 + ((playerHands[0].length - 2) * 0.5) : -1.5 + ((playerHands[1].length - 1) * 0.5);
             let targetZ = (activeHandIndex === 0) ? 1.4 : 1.4;
 
@@ -1106,26 +1095,23 @@
 
         function handleHandCompletion(msg) {
             if (isSplit && activeHandIndex === 0) {
-                // Passa alla seconda mano (sinistra)
                 document.getElementById('bj-message').innerText = msg + " Passiamo alla 2ª mano (sinistra).";
                 activeHandIndex = 1;
                 document.getElementById('turn-indicator').innerText = "Tuo Turno (2ª Mano - Sinistra)";
                 
-                // Distribuisce automaticamente la seconda carta alla mano sinistra
                 const newCardLeft = deck.pop();
                 playerHands[1].push(newCardLeft);
                 
                 setTimeout(() => {
                     dealCard3D(-0.9, 1.4, newCardLeft, false, false, () => {
                         updateScoreboard(true);
-                        document.getElementById('btn-double').disabled = true; // Niente raddoppio dopo split nella 2° mano standard
+                        document.getElementById('btn-double').disabled = true;
                         if (calculateScore(playerHands[1]) > 21) {
                             handleHandCompletion("Hai sballato anche sulla 2ª mano!");
                         }
                     });
                 }, 400);
             } else {
-                // Tutte le mani del giocatore sono concluse -> Turno del Banco
                 document.getElementById('btn-hit').disabled = true;
                 document.getElementById('btn-stand').disabled = true;
                 document.getElementById('btn-double').disabled = true;
@@ -1179,7 +1165,6 @@
                     resultMessage = "Pareggio (Push). Puntata restituita.";
                 }
             } else {
-                // Valutazione per entrambe le mani nello Split
                 let winCount = 0;
                 let pushCount = 0;
                 let lossCount = 0;
@@ -1187,7 +1172,7 @@
                 for (let i = 0; i < playerHands.length; i++) {
                     const pScore = calculateScore(playerHands[i]);
                     if (pScore <= 21 && (dScore > 21 || pScore > dScore)) {
-                        totalWin += currentBet * 2; // Ogni mano ha la sua puntata pari a currentBet
+                        totalWin += currentBet * 2; 
                         winCount++;
                     } else if (pScore <= 21 && pScore === dScore) {
                         totalWin += currentBet;
@@ -1196,7 +1181,8 @@
                         lossCount++;
                     }
                 }
-                resultMessage = `Split completato: ${win} Vinte, ${pushCount} Pareggi, ${lossCount} Perse.`;
+                // Corretto winCount al posto di win
+                resultMessage = `Split completato: ${winCount} Vinte, ${pushCount} Pareggi, ${lossCount} Perse.`;
             }
 
             balance += totalWin;
