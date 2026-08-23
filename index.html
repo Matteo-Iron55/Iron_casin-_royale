@@ -513,7 +513,7 @@
             </div>
             
             <div class="bj-table-area">
-                <!-- Canvas 3D Three.js per il tavolo, il mazzo e le carte in movimento -->
+                <!-- Canvas 3D Three.js per il tavolo, il mazzo e le carte da poker reali -->
                 <div id="webgl-container"></div>
                 
                 <div class="scores-panel">
@@ -599,11 +599,11 @@
             if(viewId === 'lobby' || viewId === 'slots-list') document.getElementById('nav-lobby').classList.add('active');
 
             if (viewId === 'blackjack') {
-                setTimeout(initThreeJS, 200); // Inizializza il 3D quando la vista diventa attiva
+                setTimeout(initThreeJS, 200);
             }
         }
 
-        /* --- THREE.JS 3D TABLE ENGINE --- */
+        /* --- THREE.JS 3D TABLE ENGINE & POKER CARDS --- */
         let scene, camera, renderer, tableMesh, deckMesh;
         let animatedCards3D = [];
         let threeInitialized = false;
@@ -630,7 +630,6 @@
             container.innerHTML = '';
             container.appendChild(renderer.domElement);
 
-            // Luci d'ambiente e direzionali per il 3D
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
             scene.add(ambientLight);
 
@@ -647,11 +646,11 @@
             tableMesh.receiveShadow = true;
             scene.add(tableMesh);
 
-            // Mazzo di carte 3D (la scarpetta del dealer in alto a destra)
-            const deckGeo = new THREE.BoxGeometry(0.8, 0.4, 1.2);
+            // Mazzo di carte 3D in alto a destra
+            const deckGeo = new THREE.BoxGeometry(0.7, 0.3, 1.0);
             const deckMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a });
             deckMesh = new THREE.Mesh(deckGeo, deckMat);
-            deckMesh.position.set(2.5, 0.2, -1.8);
+            deckMesh.position.set(2.5, 0.15, -1.8);
             deckMesh.castShadow = true;
             scene.add(deckMesh);
 
@@ -674,23 +673,81 @@
         }
         window.addEventListener('resize', onWindowResize);
 
-        // Funzione 3D per generare e animare una carta che parte dal mazzo e arriva sul tavolo
-        function dealCard3D(targetX, targetZ, isHidden = false, callback) {
-            const cardGeo = new THREE.BoxGeometry(0.7, 0.02, 1.0);
-            const cardMat = new THREE.MeshStandardMaterial({ 
-                color: isHidden ? 0x1d4ed8 : 0xffffff, 
-                roughness: 0.2 
-            });
-            const card = new THREE.Mesh(cardGeo, cardMat);
-            
-            // Posizione iniziale sopra il mazzo
-            card.position.set(2.5, 0.5, -1.8);
-            card.castShadow = true;
-            scene.add(card);
-            animatedCards3D.push(card);
+        // Genera la grafica realistica di una carta da poker con canvas dinamico
+        function createCardTexture(value, suit, isHidden = false) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 180;
+            const ctx = canvas.getContext('2d');
 
-            // Animazione fluida con GSAP dal mazzo alla posizione finale sul tavolo
-            gsap.to(card.position, {
+            if (isHidden) {
+                // Retro della carta (Blu casinò con dettagli dorati)
+                ctx.fillStyle = '#1e3a8a';
+                ctx.fillRect(0, 0, 128, 180);
+                ctx.strokeStyle = '#d4af37';
+                ctx.lineWidth = 6;
+                ctx.strokeRect(6, 6, 116, 168);
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 22px Poppins, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText("ROYALBET", 64, 98);
+            } else {
+                // Fronte della carta bianco pulito
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, 128, 180);
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(2, 2, 124, 176);
+
+                const isRed = (suit === 'hearts' || suit === 'diamonds');
+                ctx.fillStyle = isRed ? '#dc2626' : '#0f172a';
+                
+                // Valore in alto a sinistra
+                ctx.font = 'bold 24px Poppins, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText(value, 10, 28);
+
+                // Seme sotto il valore
+                const symbols = { 'hearts': '♥', 'diamonds': '♦', 'clubs': '♣', 'spades': '♠' };
+                ctx.font = 'bold 20px sans-serif';
+                ctx.fillText(symbols[suit] || '', 12, 52);
+
+                // Simbolo grande al centro
+                ctx.font = 'bold 48px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(symbols[suit] || '', 64, 100);
+            }
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        // Funzione per creare e animare la carta 3D con il valore corretto
+        function dealCard3D(targetX, targetZ, card, isHidden = false, callback) {
+            const cardGeo = new THREE.BoxGeometry(0.7, 0.01, 1.0);
+            
+            const frontTexture = createCardTexture(card ? card.value : '', card ? card.suit : '', isHidden);
+            const backTexture = createCardTexture('', '', true);
+
+            // Materiali per ogni faccia del cubo 3D della carta
+            const materials = [
+                new THREE.MeshStandardMaterial({ color: 0xffffff }), // Destra
+                new THREE.MeshStandardMaterial({ color: 0xffffff }), // Sinistra
+                new THREE.MeshStandardMaterial({ color: 0xffffff }), // Sopra (Spessore)
+                new THREE.MeshStandardMaterial({ color: 0xffffff }), // Sotto (Spessore)
+                new THREE.MeshStandardMaterial({ map: frontTexture }), // FRONTE DELLA CARTA
+                new THREE.MeshStandardMaterial({ map: backTexture })  // RETRO DELLA CARTA
+            ];
+
+            const cardMesh = new THREE.Mesh(cardGeo, materials);
+            cardMesh.position.set(2.5, 0.4, -1.8);
+            cardMesh.castShadow = true;
+            scene.add(cardMesh);
+            animatedCards3D.push(cardMesh);
+
+            // Animazione GSAP di movimento fluido dal mazzo alla posizione sul tavolo
+            gsap.to(cardMesh.position, {
                 x: targetX,
                 y: 0.05,
                 z: targetZ,
@@ -701,8 +758,8 @@
                 }
             });
 
-            gsap.to(card.rotation, {
-                y: (Math.random() - 0.5) * 0.2,
+            gsap.to(cardMesh.rotation, {
+                y: (Math.random() - 0.5) * 0.15,
                 duration: 0.6
             });
         }
@@ -849,12 +906,11 @@
             playerHand = [deck.pop(), deck.pop()];
             dealerHand = [deck.pop(), deck.pop()];
 
-            // Distribuzione 3D realistica dal mazziere
-            // Coordinate 3D sul tavolo: Giocatore in basso (Z: 1.2), Banco in alto (Z: -1.0)
-            dealCard3D(-0.5, 1.2, false, () => {
-                dealCard3D(0.5, 1.0, false, () => {
-                    dealCard3D(-0.5, -1.0, false, () => {
-                        dealCard3D(0.5, -1.2, true, () => { // Seconda carta banco coperta
+            // Distribuzione 3D delle carte con i valori corretti reali
+            dealCard3D(-0.5, 1.2, playerHand[0], false, () => {
+                dealCard3D(0.5, 1.0, playerHand[1], false, () => {
+                    dealCard3D(-0.5, -1.0, dealerHand[0], false, () => {
+                        dealCard3D(0.5, -1.2, dealerHand[1], true, () => { // Seconda carta banco coperta
                             updateScoreboard(true);
                             
                             if (calculateScore(playerHand) === 21) {
@@ -869,7 +925,6 @@
                             document.getElementById('btn-stand').disabled = false;
                             if (balance >= currentBet) document.getElementById('btn-double').disabled = false;
                             
-                            // Indicatore turno attivo sulle tue carte
                             document.getElementById('turn-indicator').innerText = "Tuo Turno (Gioca)";
                             document.getElementById('turn-indicator').style.color = '#4ade80';
                             document.getElementById('bj-message').innerText = 'Tocca a te: scegli la mossa!';
@@ -884,9 +939,8 @@
             const newCard = deck.pop();
             playerHand.push(newCard);
             
-            // Posiziona la nuova carta aggiuntiva del giocatore in 3D
             const offsetX = (playerHand.length - 2) * 0.6;
-            dealCard3D(offsetX, 1.3, false, () => {
+            dealCard3D(offsetX, 1.3, newCard, false, () => {
                 updateScoreboard(true);
                 if (calculateScore(playerHand) > 21) {
                     hideDealerHand = false;
@@ -905,7 +959,7 @@
                 
                 const newCard = deck.pop();
                 playerHand.push(newCard);
-                dealCard3D(0.8, 1.4, false, () => {
+                dealCard3D(0.8, 1.4, newCard, false, () => {
                     updateScoreboard(true);
                     if (calculateScore(playerHand) > 21) {
                         hideDealerHand = false;
@@ -934,9 +988,10 @@
 
             let dealerInterval = setInterval(() => {
                 if (calculateScore(dealerHand) < 17) {
-                    dealerHand.push(deck.pop());
+                    const dCard = deck.pop();
+                    dealerHand.push(dCard);
                     const dOffsetX = (dealerHand.length - 2) * 0.6;
-                    dealCard3D(dOffsetX, -1.3, false, () => {
+                    dealCard3D(dOffsetX, -1.3, dCard, false, () => {
                         updateScoreboard(false);
                     });
                 } else {
