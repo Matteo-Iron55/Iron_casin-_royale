@@ -1024,16 +1024,24 @@
             balance -= currentBet;
             updateUI();
             isSplit = true;
+            
+            // Verifica se si tratta di uno split di assi ('A')
+            const isAceSplit = (playerHands[0][0].value === 'A' && playerHands[0][1].value === 'A');
+
             document.getElementById('btn-split').disabled = true;
             document.getElementById('btn-double').disabled = true;
+            document.getElementById('btn-hit').disabled = true;
+            document.getElementById('btn-stand').disabled = true;
 
-            document.getElementById('bj-message').innerText = 'Split effettuato! Giochi due mani.';
+            if (isAceSplit) {
+                document.getElementById('bj-message').innerText = 'Split di Assi: ricevuta una sola carta per mano!';
+            } else {
+                document.getElementById('bj-message').innerText = 'Split effettuato! Giochi due mani.';
+            }
 
             const cardLeft = playerHands[0][0];
             const cardRight = playerHands[0][1];
             playerHands = [[cardRight], [cardLeft]];
-
-            activeHandIndex = 0; 
 
             gsap.to(animatedCards3D[0].position, { x: -1.5, duration: 0.5, ease: "power2.out" });
 
@@ -1042,8 +1050,28 @@
 
             dealCard3D(1.2, 1.4, newCardRight, false, false, () => {
                 updateScoreboard(true);
-                document.getElementById('turn-indicator').innerText = "Tuo Turno (1ª Mano - Destra)";
-                document.getElementById('turn-indicator').style.color = '#4ade80';
+                
+                if (isAceSplit) {
+                    // Regola dello split di assi: una sola carta per mano, poi passa direttamente al banco
+                    activeHandIndex = 1;
+                    const newCardLeft = deck.pop();
+                    playerHands[1].push(newCardLeft);
+                    
+                    setTimeout(() => {
+                        dealCard3D(-0.9, 1.4, newCardLeft, false, false, () => {
+                            updateScoreboard(true);
+                            setTimeout(() => {
+                                startDealerTurn();
+                            }, 800);
+                        });
+                    }, 400);
+                } else {
+                    activeHandIndex = 0;
+                    document.getElementById('turn-indicator').innerText = "Tuo Turno (1ª Mano - Destra)";
+                    document.getElementById('turn-indicator').style.color = '#4ade80';
+                    document.getElementById('btn-hit').disabled = false;
+                    document.getElementById('btn-stand').disabled = false;
+                }
             });
         }
 
@@ -1108,6 +1136,9 @@
                         document.getElementById('btn-double').disabled = true;
                         if (calculateScore(playerHands[1]) > 21) {
                             handleHandCompletion("Hai sballato anche sulla 2ª mano!");
+                        } else {
+                            document.getElementById('btn-hit').disabled = false;
+                            document.getElementById('btn-stand').disabled = false;
                         }
                     });
                 }, 400);
@@ -1181,7 +1212,6 @@
                         lossCount++;
                     }
                 }
-                // Corretto winCount al posto di win
                 resultMessage = `Split completato: ${winCount} Vinte, ${pushCount} Pareggi, ${lossCount} Perse.`;
             }
 
@@ -1256,6 +1286,7 @@
         }
 
         function finalizeSpin() {
+            let winAmount = 0;
             const r1 = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
             const r2 = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
             const r3 = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
@@ -1264,7 +1295,6 @@
             document.getElementById('reel-2').innerText = r2;
             document.getElementById('reel-3').innerText = r3;
 
-            let winAmount = 0;
             if (r1 === r2 && r2 === r3) {
                 let multiplier = slotPayouts[r1] || 5;
                 winAmount = slotBet * multiplier;
