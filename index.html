@@ -405,11 +405,13 @@
 
         .action-buttons {
             display: flex;
-            gap: 15px;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .bj-btn {
-            padding: 10px 25px;
+            padding: 10px 22px;
             border-radius: 5px;
             font-weight: 600;
             font-size: 15px;
@@ -421,6 +423,7 @@
         .btn-hit { background: #eab308; color: #0b0f19; }
         .btn-stand { background: #ef4444; color: white; }
         .btn-double { background: #3b82f6; color: white; }
+        .btn-split { background: #8b5cf6; color: white; }
         .btn-deal { background: #10b981; color: white; font-size: 16px; padding: 12px 35px; }
 
         .bj-btn:hover { opacity: 0.9; transform: translateY(-2px); }
@@ -513,7 +516,6 @@
             </div>
             
             <div class="bj-table-area">
-                <!-- Canvas 3D Three.js per il tavolo allargato e carte in primo piano -->
                 <div id="webgl-container"></div>
                 
                 <div class="scores-panel">
@@ -541,6 +543,7 @@
                     <button id="btn-hit" class="bj-btn btn-hit" onclick="playerHit()" disabled>Carta</button>
                     <button id="btn-stand" class="bj-btn btn-stand" onclick="playerStand()" disabled>Stai</button>
                     <button id="btn-double" class="bj-btn btn-double" onclick="playerDouble()" disabled>Raddoppia</button>
+                    <button id="btn-split" class="bj-btn btn-split" onclick="playerSplit()" disabled>Split</button>
                 </div>
             </div>
         </div>
@@ -621,7 +624,6 @@
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x062c1a);
 
-            // Inquadratura ravvicinata e ottimizzata
             camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
             camera.position.set(0, 5.0, 3.8);
             camera.lookAt(0, 0, -0.2);
@@ -641,7 +643,6 @@
             dirLight.castShadow = true;
             scene.add(dirLight);
 
-            // Tavolo da gioco allargato (10 x 7)
             const tableGeo = new THREE.PlaneGeometry(10, 7);
             const tableMat = new THREE.MeshStandardMaterial({ color: 0x0f5132, roughness: 0.8 });
             tableMesh = new THREE.Mesh(tableGeo, tableMat);
@@ -649,7 +650,6 @@
             tableMesh.receiveShadow = true;
             scene.add(tableMesh);
 
-            // Mazzo di carte 3D in alto a destra
             const deckGeo = new THREE.BoxGeometry(0.7, 0.3, 1.0);
             const deckBackTex = createCardTexture('', '', true);
             const maxAniso = renderer.capabilities.getMaxAnisotropy();
@@ -687,7 +687,6 @@
         }
         window.addEventListener('resize', onWindowResize);
 
-        // Texture Ultra HD (1024x1440)
         function createCardTexture(value, suit, isHidden = false) {
             const canvas = document.createElement('canvas');
             canvas.width = 1024;
@@ -805,9 +804,10 @@
                 y: (Math.random() - 0.5) * 0.15,
                 duration: 0.6
             });
+            
+            return cardMesh;
         }
 
-        // Animazione 3D fluida di capovolgimento della carta coperta del banco
         function flipDealerHiddenCard(cardMesh, frontCard, callback) {
             gsap.to(cardMesh.position, { y: 1.0, duration: 0.3, ease: "power2.out" });
             gsap.to(cardMesh.rotation, { 
@@ -834,11 +834,15 @@
         }
 
 
-        /* --- BLACKJACK LOGIC --- */
+        /* --- BLACKJACK LOGIC (WITH SPLIT & DUAL HANDS) --- */
         let currentBet = 0;
         let lastBet = 0; 
         let deck = [];
-        let playerHand = [];
+        
+        let playerHands = []; // Array di mani (es. [ [c1, c2], [c3, c4] ] in caso di split)
+        let activeHandIndex = 0; // 0 = mano destra, 1 = mano sinistra
+        let isSplit = false;
+        
         let dealerHand = [];
         let gameInProgress = false;
         let hideDealerHand = true;
@@ -871,7 +875,9 @@
         function resetTable() {
             currentBet = 0;
             lastBet = 0;
-            playerHand = [];
+            playerHands = [];
+            activeHandIndex = 0;
+            isSplit = false;
             dealerHand = [];
             gameInProgress = false;
             clear3DCards();
@@ -888,6 +894,7 @@
             document.getElementById('btn-hit').disabled = true;
             document.getElementById('btn-stand').disabled = true;
             document.getElementById('btn-double').disabled = true;
+            document.getElementById('btn-split').disabled = true;
         }
 
         function createDeck() {
@@ -930,7 +937,9 @@
         }
 
         function updateScoreboard(hideDealerSecond = true) {
-            document.getElementById('player-score').innerText = calculateScore(playerHand);
+            if (playerHands.length > 0 && playerHands[activeHandIndex]) {
+                document.getElementById('player-score').innerText = calculateScore(playerHands[activeHandIndex]);
+            }
             if (hideDealerHand && hideDealerSecond && dealerHand.length >= 2) {
                 document.getElementById('dealer-score').innerText = getCardNumericValue(dealerHand[0]);
             } else {
@@ -962,21 +971,27 @@
             lastBet = currentBet;
             gameInProgress = true;
             hideDealerHand = true;
+            isSplit = false;
+            activeHandIndex = 0;
             clear3DCards();
             document.getElementById('chips-selection-box').style.display = 'flex';
             document.getElementById('btn-deal').disabled = true;
 
             createDeck();
-            playerHand = [deck.pop(), deck.pop()];
+            const pCard1 = deck.pop(); // Mano sinistra iniziale
+            const pCard2 = deck.pop(); // Mano destra iniziale
+            playerHands = [[pCard1, pCard2]];
             dealerHand = [deck.pop(), deck.pop()];
 
-            dealCard3D(-0.6, 1.2, playerHand[0], false, false, () => {
-                dealCard3D(0.6, 1.0, playerHand[1], false, false, () => {
+            // Distribuzione carte 3D
+            dealCard3D(-0.6, 1.2, pCard1, false, false, () => {
+                dealCard3D(0.6, 1.0, pCard2, false, false, () => {
                     dealCard3D(-0.6, -1.0, dealerHand[0], false, false, () => {
                         dealCard3D(0.6, -1.2, dealerHand[1], true, true, () => {
                             updateScoreboard(true);
                             
-                            if (calculateScore(playerHand) === 21) {
+                            const handScore = calculateScore(playerHands[0]);
+                            if (handScore === 21) {
                                 hideDealerHand = false;
                                 flipDealerHiddenCard(dealerCardMeshes[1], dealerHand[1], () => {
                                     updateScoreboard(false);
@@ -986,11 +1001,16 @@
                                 return;
                             }
 
+                            // Abilita comandi standard
                             document.getElementById('btn-hit').disabled = false;
                             document.getElementById('btn-stand').disabled = false;
                             if (balance >= currentBet) document.getElementById('btn-double').disabled = false;
+
+                            // Abilita Split se le prime due carte hanno lo stesso valore (es. coppia o Re/Regina entrambi valore 10)
+                            const canSplit = (getCardNumericValue(pCard1) === getCardNumericValue(pCard2)) && (balance >= currentBet);
+                            document.getElementById('btn-split').disabled = !canSplit;
                             
-                            document.getElementById('turn-indicator').innerText = "Tuo Turno (Gioca)";
+                            document.getElementById('turn-indicator').innerText = "Tuo Turno (Mano Destra)";
                             document.getElementById('turn-indicator').style.color = '#4ade80';
                             document.getElementById('bj-message').innerText = 'Tocca a te: scegli la mossa!';
                         });
@@ -999,20 +1019,59 @@
             });
         }
 
+        // FUNZIONE SPLIT
+        function playerSplit() {
+            if (balance < currentBet) {
+                alert("Fondi insufficienti per effettuare lo Split!");
+                return;
+            }
+            balance -= currentBet;
+            updateUI();
+            isSplit = true;
+            document.getElementById('btn-split').disabled = true;
+            document.getElementById('btn-double').disabled = true;
+
+            document.getElementById('bj-message').innerText = 'Split effettuato! Giochi due mani.';
+
+            // Dividi le carte in due mani distinte:
+            // playerHands[0] = mano destra (carta 2)
+            // playerHands[1] = mano sinistra (carta 1)
+            const cardLeft = playerHands[0][0];
+            const cardRight = playerHands[0][1];
+            playerHands = [[cardRight], [cardLeft]];
+
+            activeHandIndex = 0; // Si comincia a giocare la mano di destra (indice 0)
+
+            // Anima la carta sinistra spostandola a sinistra (-1.5)
+            // animatedCards3D[0] è la carta sinistra, animatedCards3D[1] è la carta destra
+            gsap.to(animatedCards3D[0].position, { x: -1.5, duration: 0.5, ease: "power2.out" });
+
+            // Pescaggio immediato di una nuova carta per la mano destra (indice 0)
+            const newCardRight = deck.pop();
+            playerHands[0].push(newCardRight);
+
+            dealCard3D(1.2, 1.4, newCardRight, false, false, () => {
+                updateScoreboard(true);
+                document.getElementById('turn-indicator').innerText = "Tuo Turno (1ª Mano - Destra)";
+                document.getElementById('turn-indicator').style.color = '#4ade80';
+            });
+        }
+
         function playerHit() {
             document.getElementById('btn-double').disabled = true;
+            document.getElementById('btn-split').disabled = true;
+
             const newCard = deck.pop();
-            playerHand.push(newCard);
+            playerHands[activeHandIndex].push(newCard);
             
-            const offsetX = (playerHand.length - 2) * 0.7;
-            dealCard3D(offsetX, 1.4, newCard, false, false, () => {
+            // Calcola la posizione X in base alla mano attiva e numero di carte
+            let targetX = (activeHandIndex === 0) ? 0.6 + ((playerHands[0].length - 2) * 0.5) : -1.5 + ((playerHands[1].length - 1) * 0.5);
+            let targetZ = (activeHandIndex === 0) ? 1.4 : 1.4;
+
+            dealCard3D(targetX, targetZ, newCard, false, false, () => {
                 updateScoreboard(true);
-                if (calculateScore(playerHand) > 21) {
-                    hideDealerHand = false;
-                    flipDealerHiddenCard(dealerCardMeshes[1], dealerHand[1], () => {
-                        updateScoreboard(false);
-                        endGame("Hai sballato! (Bust). Il Banco vince.");
-                    });
+                if (calculateScore(playerHands[activeHandIndex]) > 21) {
+                    handleHandCompletion("Hai sballato su questa mano!");
                 }
             });
         }
@@ -1025,15 +1084,13 @@
                 document.getElementById('current-bet').innerText = currentBet;
                 
                 const newCard = deck.pop();
-                playerHand.push(newCard);
-                dealCard3D(1.2, 1.5, newCard, false, false, () => {
+                playerHands[activeHandIndex].push(newCard);
+                let targetX = (activeHandIndex === 0) ? 1.2 : -1.0;
+                
+                dealCard3D(targetX, 1.5, newCard, false, false, () => {
                     updateScoreboard(true);
-                    if (calculateScore(playerHand) > 21) {
-                        hideDealerHand = false;
-                        flipDealerHiddenCard(dealerCardMeshes[1], dealerHand[1], () => {
-                            updateScoreboard(false);
-                            endGame("Hai sballato dopo il raddoppio!");
-                        });
+                    if (calculateScore(playerHands[activeHandIndex]) > 21) {
+                        handleHandCompletion("Hai sballato dopo il raddoppio!");
                     } else {
                         playerStand();
                     }
@@ -1044,17 +1101,47 @@
         }
 
         function playerStand() {
-            document.getElementById('btn-hit').disabled = true;
-            document.getElementById('btn-stand').disabled = true;
-            document.getElementById('btn-double').disabled = true;
-            
+            handleHandCompletion("Mano completata.");
+        }
+
+        function handleHandCompletion(msg) {
+            if (isSplit && activeHandIndex === 0) {
+                // Passa alla seconda mano (sinistra)
+                document.getElementById('bj-message').innerText = msg + " Passiamo alla 2ª mano (sinistra).";
+                activeHandIndex = 1;
+                document.getElementById('turn-indicator').innerText = "Tuo Turno (2ª Mano - Sinistra)";
+                
+                // Distribuisce automaticamente la seconda carta alla mano sinistra
+                const newCardLeft = deck.pop();
+                playerHands[1].push(newCardLeft);
+                
+                setTimeout(() => {
+                    dealCard3D(-0.9, 1.4, newCardLeft, false, false, () => {
+                        updateScoreboard(true);
+                        document.getElementById('btn-double').disabled = true; // Niente raddoppio dopo split nella 2° mano standard
+                        if (calculateScore(playerHands[1]) > 21) {
+                            handleHandCompletion("Hai sballato anche sulla 2ª mano!");
+                        }
+                    });
+                }, 400);
+            } else {
+                // Tutte le mani del giocatore sono concluse -> Turno del Banco
+                document.getElementById('btn-hit').disabled = true;
+                document.getElementById('btn-stand').disabled = true;
+                document.getElementById('btn-double').disabled = true;
+                document.getElementById('btn-split').disabled = true;
+
+                startDealerTurn();
+            }
+        }
+
+        function startDealerTurn() {
             document.getElementById('turn-indicator').innerText = "Turno del Banco";
             document.getElementById('turn-indicator').style.color = '#f87171';
             document.getElementById('bj-message').innerText = 'Il Banco scopre la carta...';
 
             hideDealerHand = false;
 
-            // Esegue l'animazione di capovolgimento della carta coperta del dealer con GSAP
             flipDealerHiddenCard(dealerCardMeshes[1], dealerHand[1], () => {
                 updateScoreboard(false);
                 document.getElementById('bj-message').innerText = 'Il Banco pesca...';
@@ -1069,24 +1156,51 @@
                         });
                     } else {
                         clearInterval(dealerInterval);
-                        evaluateWinner();
+                        evaluateAllWinners();
                     }
                 }, 1000);
             });
         }
 
-        function evaluateWinner() {
-            const pScore = calculateScore(playerHand);
+        function evaluateAllWinners() {
             const dScore = calculateScore(dealerHand);
-            if (dScore > 21 || pScore > dScore) {
-                balance += currentBet * 2;
-                endGame("Complimenti, hai vinto la mano!");
-            } else if (pScore < dScore) {
-                endGame("Il Banco vince la mano.");
+            let totalWin = 0;
+            let resultMessage = "";
+
+            if (!isSplit) {
+                const pScore = calculateScore(playerHands[0]);
+                if (dScore > 21 || pScore > dScore) {
+                    totalWin += currentBet * 2;
+                    resultMessage = "Complimenti, hai vinto la mano!";
+                } else if (pScore < dScore) {
+                    resultMessage = "Il Banco vince la mano.";
+                } else {
+                    totalWin += currentBet;
+                    resultMessage = "Pareggio (Push). Puntata restituita.";
+                }
             } else {
-                balance += currentBet;
-                endGame("Pareggio (Push). Puntata restituita.");
+                // Valutazione per entrambe le mani nello Split
+                let winCount = 0;
+                let pushCount = 0;
+                let lossCount = 0;
+
+                for (let i = 0; i < playerHands.length; i++) {
+                    const pScore = calculateScore(playerHands[i]);
+                    if (pScore <= 21 && (dScore > 21 || pScore > dScore)) {
+                        totalWin += currentBet * 2; // Ogni mano ha la sua puntata pari a currentBet
+                        winCount++;
+                    } else if (pScore <= 21 && pScore === dScore) {
+                        totalWin += currentBet;
+                        pushCount++;
+                    } else {
+                        lossCount++;
+                    }
+                }
+                resultMessage = `Split completato: ${win} Vinte, ${pushCount} Pareggi, ${lossCount} Perse.`;
             }
+
+            balance += totalWin;
+            endGame(resultMessage);
         }
 
         function endGame(message) {
@@ -1096,6 +1210,7 @@
             document.getElementById('btn-hit').disabled = true;
             document.getElementById('btn-stand').disabled = true;
             document.getElementById('btn-double').disabled = true;
+            document.getElementById('btn-split').disabled = true;
             gameInProgress = false;
             
             setTimeout(() => {
