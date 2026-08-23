@@ -645,7 +645,7 @@
 
         function clearBet() {
             if (gameInProgress || currentBet === 0) return;
-            currentBet = 0; // Visto che il saldo non era stato toccato, azzeriamo solo la puntata sul tavolo
+            currentBet = 0; 
             document.getElementById('current-bet').innerText = currentBet;
             document.getElementById('btn-deal').disabled = lastBet === 0;
             document.getElementById('btn-deal').innerText = lastBet > 0 ? "Gioca Ancora" : "Distribuisci";
@@ -855,6 +855,7 @@
             document.getElementById('btn-hit').disabled = true;
             document.getElementById('btn-stand').disabled = true;
             document.getElementById('btn-double').disabled = true;
+            gameInProgress = false; // Sblocca la selezione delle fiches per la mano successiva
             
             setTimeout(() => {
                 document.getElementById('btn-deal').innerText = "Gioca Ancora";
